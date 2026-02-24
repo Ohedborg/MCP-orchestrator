@@ -4,6 +4,8 @@ const serverList = document.getElementById('server-list');
 const workflowList = document.getElementById('workflow-list');
 
 const addServerBtn = document.getElementById('add-server-btn');
+const importJsonBtn = document.getElementById('import-json-btn');
+const importJsonInput = document.getElementById('import-json-input');
 const createWorkflowBtn = document.getElementById('create-workflow-btn');
 const runWorkflowBtn = document.getElementById('run-workflow-btn');
 const refreshBtn = document.getElementById('refresh-btn');
@@ -145,6 +147,40 @@ canvasGrid.addEventListener('pointerup', (event) => {
 addServerBtn.addEventListener('click', () => serverDialog.showModal());
 refreshBtn.addEventListener('click', fetchState);
 centerBtn.addEventListener('click', centerViewport);
+importJsonBtn.addEventListener('click', () => importJsonInput.click());
+
+importJsonInput.addEventListener('change', async (event) => {
+  const [file] = event.target.files || [];
+  if (!file) {
+    return;
+  }
+
+  try {
+    const text = await file.text();
+    const payload = JSON.parse(text);
+
+    const response = await fetch('/api/servers/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const result = await response.json();
+    if (!response.ok) {
+      alert(result.error || 'Import failed');
+    } else if (result.errors?.length) {
+      alert(`Imported ${result.imported.length} server(s). Errors: ${result.errors.map((error) => `${error.name}: ${error.error}`).join(', ')}`);
+    } else {
+      alert(`Imported ${result.imported.length} server(s).`);
+    }
+
+    await fetchState();
+  } catch {
+    alert('Invalid JSON file');
+  } finally {
+    importJsonInput.value = '';
+  }
+});
 
 serverDialog.addEventListener('close', async () => {
   if (serverDialog.returnValue !== 'submit') {
@@ -165,8 +201,8 @@ serverDialog.addEventListener('close', async () => {
   });
 
   if (!response.ok) {
-    const payload = await response.json();
-    alert(payload.error || 'Could not register MCP server');
+    const responsePayload = await response.json();
+    alert(responsePayload.error || 'Could not register MCP server');
   }
 
   serverForm.reset();
@@ -210,13 +246,13 @@ runWorkflowBtn.addEventListener('click', async () => {
     body: JSON.stringify({ workflowId: selectedWorkflowId, input: { source: 'canvas' } })
   });
 
-  const payload = await response.json();
+  const responsePayload = await response.json();
   if (!response.ok) {
-    alert(payload.error || 'Run failed');
+    alert(responsePayload.error || 'Run failed');
     return;
   }
 
-  alert(JSON.stringify(payload.result, null, 2));
+  alert(JSON.stringify(responsePayload.result, null, 2));
 });
 
 fetchState();

@@ -41,6 +41,40 @@ const respondJson = (res, statusCode, payload) => {
 const jsonRpcResult = (id, result) => ({ jsonrpc: '2.0', id, result });
 const jsonRpcError = (id, code, message) => ({ jsonrpc: '2.0', id, error: { code, message } });
 
+const parseIdeJsonConfig = (config) => {
+  const mcpServers = config?.mcpServers;
+  if (!mcpServers || typeof mcpServers !== 'object') {
+    return { error: 'JSON must contain an mcpServers object' };
+  }
+
+  const entries = Object.entries(mcpServers).map(([name, definition]) => ({
+    name,
+    endpoint: definition.url || definition.endpoint,
+    description: definition.description || '',
+    toolName: definition.toolName,
+    transport: definition.transport || 'streamable-http'
+  }));
+
+  return { entries };
+};
+
+const registerServer = async ({ name, endpoint, description, toolName, transport }) => {
+  const init = await initializeServer(endpoint);
+  const tools = await listTools(endpoint);
+
+  const selectedTool = toolName || tools[0]?.name;
+  if (!selectedTool) {
+    return { error: `No tools found on server: ${name}` };
+  }
+
+  if (!tools.some((tool) => tool.name === selectedTool)) {
+    return { error: `Tool not found on server: ${selectedTool}`, tools };
+  }
+
+  const server = store.addServer({ name, endpoint, description, toolName: selectedTool, transport });
+  return { server, negotiated: init, tools };
+};
+
 const executeWorkflow = async ({ workflowId, input = {} }) => {
   const workflow = store.getWorkflow(workflowId);
   if (!workflow) {
@@ -132,20 +166,56 @@ export const app = createServer(async (req, res) => {
     }
 
     try {
-      const init = await initializeServer(endpoint);
-      const tools = await listTools(endpoint);
-      if (!tools.some((tool) => tool.name === toolName)) {
-        respondJson(res, 400, { error: `Tool not found on server: ${toolName}`, tools });
+      const result = await registerServer({ name, endpoint, description, toolName, transport: 'streamable-http' });
+      if (result.error) {
+        respondJson(res, 400, result);
         return;
       }
 
-      const server = store.addServer({ name, endpoint, description, toolName });
-      respondJson(res, 201, { server, negotiated: init, tools });
+      respondJson(res, 201, result);
       return;
     } catch (error) {
       respondJson(res, 502, { error: 'Failed to connect to MCP server', details: String(error.message || error) });
       return;
     }
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/servers/import') {
+    const body = await readBody(req);
+    if (!body) {
+      respondJson(res, 400, { error: 'Invalid JSON body' });
+      return;
+    }
+
+    const parsed = parseIdeJsonConfig(body);
+    if (parsed.error) {
+      respondJson(res, 400, parsed);
+      return;
+    }
+
+    const imported = [];
+    const errors = [];
+
+    for (const entry of parsed.entries) {
+      if (!entry.name || !entry.endpoint) {
+        errors.push({ name: entry.name || 'unknown', error: 'name and endpoint/url are required' });
+        continue;
+      }
+
+      try {
+        const result = await registerServer(entry);
+        if (result.error) {
+          errors.push({ name: entry.name, error: result.error });
+          continue;
+        }
+        imported.push(result.server);
+      } catch (error) {
+        errors.push({ name: entry.name, error: String(error.message || error) });
+      }
+    }
+
+    respondJson(res, 201, { imported, errors });
+    return;
   }
 
   if (req.method === 'POST' && url.pathname === '/api/workflows') {

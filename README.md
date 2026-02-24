@@ -5,7 +5,8 @@ A workflow canvas for composing multiple MCP servers into one MCP server endpoin
 ## Product behavior
 
 - Register external MCP servers (endpoint + tool name).
-- During registration, the orchestrator behaves as an MCP client and performs:
+- Import MCP servers directly from an IDE-style JSON file (Cursor-like `mcpServers` format).
+- During registration/import, the orchestrator behaves as an MCP client and performs:
   1. `initialize`
   2. `tools/list`
 - Build a chain workflow (up to 5 steps).
@@ -24,8 +25,23 @@ Then open <http://localhost:4173>.
 
 - `GET /api/state`
 - `POST /api/servers` body: `{ "name", "endpoint", "toolName", "description" }`
+- `POST /api/servers/import` body: `{ "mcpServers": { "name": { "url", "toolName", "description" } } }`
 - `POST /api/workflows` body: `{ "name", "steps": [{ "serverId", "toolName", "y" }] }`
 - `POST /api/workflows/run` body: `{ "workflowId", "input" }`
+
+### JSON import example
+
+```json
+{
+  "mcpServers": {
+    "Docs MCP": {
+      "url": "http://127.0.0.1:9000/mcp",
+      "toolName": "search_docs",
+      "description": "Documentation search server"
+    }
+  }
+}
+```
 
 ## MCP endpoint exposed by orchestrator
 

@@ -52,22 +52,30 @@ test('registers mcp server and executes workflow via orchestrator mcp interface'
   const port = orchestrator.address().port;
   const base = `http://127.0.0.1:${port}`;
 
-  const registration = await fetch(`${base}/api/servers`, {
+  const importPayload = {
+    mcpServers: {
+      'Echo MCP': {
+        url: `http://127.0.0.1:${upstreamPort}`,
+        toolName: 'echo',
+        description: 'Cursor-style imported MCP server'
+      }
+    }
+  };
+
+  const imported = await fetch(`${base}/api/servers/import`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      name: 'Echo MCP',
-      endpoint: `http://127.0.0.1:${upstreamPort}`,
-      toolName: 'echo'
-    })
+    body: JSON.stringify(importPayload)
   }).then((res) => res.json());
+
+  assert.equal(imported.imported.length, 1);
 
   const workflow = await fetch(`${base}/api/workflows`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       name: 'One Step',
-      steps: [{ serverId: registration.server.id, toolName: 'echo', y: 90 }]
+      steps: [{ serverId: imported.imported[0].id, toolName: 'echo', y: 90 }]
     })
   }).then((res) => res.json());
 
