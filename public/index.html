@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MCP Flow Studio</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="workspace">
+      <section class="canvas-shell">
+        <header class="canvas-header">
+          <div>
+            <h1>MCP Flow Studio</h1>
+            <p>Infinite-grid canvas for chaining MCP servers into one exposed MCP endpoint.</p>
+          </div>
+          <button id="run-workflow-btn" class="ghost-btn">Run</button>
+        </header>
+
+        <div class="canvas-grid" id="canvas-grid">
+          <div class="canvas-stage" id="canvas"></div>
+        </div>
+      </section>
+
+      <aside class="panel">
+        <h2>Registered Servers</h2>
+        <ul id="server-list"></ul>
+        <h2>Workflows</h2>
+        <ul id="workflow-list"></ul>
+      </aside>
+    </main>
+
+    <nav class="bottom-toolbar">
+      <button id="add-server-btn">+ Server</button>
+      <button id="import-json-btn">Import JSON</button>
+      <button id="create-workflow-btn">+ Chain</button>
+      <button id="refresh-btn">Refresh</button>
+      <button id="center-btn">Center</button>
+      <input id="import-json-input" type="file" accept="application/json,.json" hidden />
+    </nav>
+
+    <dialog id="server-dialog">
+      <form method="dialog" id="server-form">
+        <h3>Register MCP Server</h3>
+        <label>Name <input name="name" required /></label>
+        <label>Endpoint <input name="endpoint" placeholder="http://localhost:9000/mcp" required /></label>
+        <label>Tool Name <input name="toolName" placeholder="search_docs" required /></label>
+        <label>Description <textarea name="description"></textarea></label>
+        <menu>
+          <button value="cancel">Cancel</button>
+          <button value="submit">Save</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
