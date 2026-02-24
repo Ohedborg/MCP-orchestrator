@@ -1,0 +1,12 @@
+{
+  "name": "mcp-orchestrator",
+  "version": "0.1.0",
+  "description": "MCP orchestration platform demo with canvas UI and chain exposure",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test"
+  }
+}
